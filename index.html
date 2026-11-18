@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mascotas Limpiadoras</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#fbf6ee;--card:#fff;--ink:#3b2f2a;--mute:#8a7b70;--line:#e8dccd;--acc:#4f7a5a;--acc2:#e0894a;--bad:#c2483d;--good:#3f8f5a;--dirt:#8b5e3c}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+h1,h2,h3{margin:.2em 0}
+button{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:.5em .9em;border-radius:10px}
+button.pri{background:var(--acc);color:#fff;border-color:var(--acc)}
+button.warn{background:var(--acc2);color:#fff;border-color:var(--acc2)}
+button:disabled{opacity:.45;cursor:not-allowed}
+input,select{font:inherit;padding:.3em .4em;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink)}
+.wrap{max-width:1200px;margin:0 auto;padding:16px}
+.screen{display:none}.screen.on{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.mute{color:var(--mute);font-size:.9em}
+/* menu */
+.menu{max-width:640px;margin:30px auto;text-align:center}
+.menu .big{font-size:2.2em}
+.pets{display:flex;gap:10px;justify-content:center;margin:14px 0}
+.pet-pick{width:170px;padding:12px;border:2px solid var(--line);border-radius:14px;background:#fff;cursor:pointer;text-align:center}
+.pet-pick.sel{border-color:var(--acc);background:#eef5ef}
+.pet-pick .e{font-size:2.4em}
+.menu .btns{display:flex;flex-direction:column;gap:8px;max-width:320px;margin:16px auto}
+/* game */
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.clock{font-weight:600}
+.bar{height:10px;background:var(--line);border-radius:6px;overflow:hidden;width:200px}
+.bar>i{display:block;height:100%;background:var(--good)}
+.layout{display:grid;grid-template-columns:1fr 330px;gap:14px}
+@media(max-width:880px){.layout{grid-template-columns:1fr}}
+.rooms{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.room h3{display:flex;justify-content:space-between;font-size:1.05em}
+.room.clean{background:#eef7ef;border-color:#b9dcc2}
+.obj{display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border:1px solid var(--line);border-radius:8px;margin:5px 0;gap:6px}
+.obj.click{cursor:pointer;border-color:var(--acc2);box-shadow:0 0 0 2px #f6d8c2}
+.obj.click:hover{background:#fff4ea}
+.obj.done{opacity:.5;text-decoration:line-through}
+.obj .fs{display:flex;gap:2px;flex-wrap:wrap;justify-content:flex-end;max-width:120px}
+.tok{width:12px;height:12px;border-radius:50%;background:var(--dirt)}
+.tok.off{background:var(--line)}
+.pen{font-size:.75em;background:#fde7e4;color:var(--bad);border-radius:6px;padding:1px 5px;margin-left:4px}
+.side{display:flex;flex-direction:column;gap:12px}
+.petcard{border:2px solid var(--line)}
+.petcard.act{border-color:var(--acc2);box-shadow:0 0 0 3px #f6d8c2}
+.petcard .hd{display:flex;align-items:center;gap:8px}
+.petcard .hd .e{font-size:1.8em}
+.chip{display:inline-block;font-size:.8em;border:1px solid var(--line);border-radius:999px;padding:2px 8px;margin:2px;background:#fff}
+.chip.use{cursor:pointer;border-color:var(--acc);color:var(--acc);font-weight:600}
+.chip.use:hover{background:#eef5ef}
+.dice{display:flex;gap:8px;justify-content:center;margin:8px 0}
+.die{width:54px;height:54px;border-radius:10px;border:2px solid var(--ink);display:flex;align-items:center;justify-content:center;font-size:1.6em;font-weight:700;background:#fff}
+.die.d4{border-color:var(--acc2);color:var(--acc2);width:44px;height:44px;font-size:1.2em;clip-path:polygon(50% 0,100% 100%,0 100%);border:none;background:#f6d8c2;padding-top:12px}
+.die.x{background:var(--bad);color:#fff;border-color:var(--bad)}
+.die.ex{border-color:var(--acc);color:var(--acc)}
+.pts{text-align:center;font-size:1.1em}
+.log{max-height:220px;overflow:auto;font-size:.85em}
+.log div{padding:3px 0;border-bottom:1px dashed var(--line)}
+/* modal */
+.modal{position:fixed;inset:0;background:#0006;display:none;align-items:center;justify-content:center;padding:16px;z-index:9}
+.modal.on{display:flex}
+.modal .card{max-width:420px;width:100%}
+/* editor */
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
+.tabs button.on{background:var(--acc);color:#fff}
+table{border-collapse:collapse;width:100%}
+th,td{border-bottom:1px solid var(--line);padding:4px;text-align:left}
+td input{width:100%}
+.tablewrap{overflow-x:auto}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- MENU -->
+<section id="menu" class="screen on">
+  <div class="menu">
+    <div class="big">🧹🐶🐱🐰</div>
+    <h1>Mascotas Limpiadoras</h1>
+    <p class="mute">¡Limpien la casa antes de que vuelvan los dueños!</p>
+    <div class="card">
+      <h3>Elige las mascotas que juegan</h3>
+      <div class="pets" id="petPick"></div>
+      <div class="row" style="justify-content:center">
+        <label>Rondas antes de que lleguen los dueños: <input id="rondasIn" type="number" min="1" max="50" style="width:70px"></label>
+      </div>
+    </div>
+    <div class="btns">
+      <button class="pri" id="btnPlay">▶ Jugar</button>
+      <button id="btnEdit">✏️ Editar escenario</button>
+      <button id="btnLoadX">📂 Cargar Excel</button>
+      <button id="btnSaveX">💾 Descargar Excel</button>
+      <button id="btnRules">📜 Reglas</button>
+    </div>
+    <p class="mute" id="dataInfo"></p>
+    <input type="file" id="fileX" accept=".xlsx,.xls" hidden>
+  </div>
+</section>
+
+<!-- GAME -->
+<section id="game" class="screen">
+  <div class="top">
+    <div class="row"><button id="btnMenu">← Menú</button><b class="clock" id="clock"></b></div>
+    <div class="row"><span class="mute">Casa limpia:</span><div class="bar"><i id="prog"></i></div><span id="progTxt"></span></div>
+  </div>
+  <div class="layout">
+    <div class="rooms" id="rooms"></div>
+    <div class="side">
+      <div class="card" id="turnBox"></div>
+      <div id="petCards" class="side"></div>
+      <div class="card"><h3>Registro</h3><div class="log" id="log"></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- EDITOR -->
+<section id="editor" class="screen">
+  <div class="top">
+    <div class="row"><button id="btnEdBack">← Menú</button><h2>Editor de escenario</h2></div>
+    <div class="row">
+      <button class="pri" id="btnEdSave">Guardar cambios</button>
+      <button id="btnEdReset">Restaurar escenario por defecto</button>
+    </div>
+  </div>
+  <p class="mute">Los cambios se guardan en este navegador. Para compartirlos o editarlos en masa usa “Descargar Excel” en el menú y luego “Cargar Excel”.</p>
+  <div class="tabs" id="edTabs"></div>
+  <div class="card tablewrap" id="edTable"></div>
+  <p class="mute" id="edHelp"></p>
+</section>
+
+</div>
+
+<div class="modal" id="modal"><div class="card" id="modalBody"></div></div>
+
+<script>
+// ======================= DATOS POR DEFECTO (igual que datos_escenario.xlsx) =======================
+const DEFAULT_DATA = {
+  Config:[{clave:"rondas",valor:10},{clave:"recompensas_por_habitacion",valor:1}],
+  Habitaciones:[
+    {id:"sala",nombre:"Sala",orden:1},{id:"cocina",nombre:"Cocina",orden:2},{id:"bano",nombre:"Baño",orden:3},
+    {id:"dormitorio",nombre:"Dormitorio",orden:4},{id:"comedor",nombre:"Comedor",orden:5}],
+  Objetos:[
+    {habitacion_id:"sala",nombre:"Sofá",fs:4,penalizacion:0,cantidad:1},
+    {habitacion_id:"sala",nombre:"Alfombra",fs:5,penalizacion:0,cantidad:1},
+    {habitacion_id:"sala",nombre:"Mesa de centro",fs:3,penalizacion:0,cantidad:1},
+    {habitacion_id:"sala",nombre:"Florero",fs:2,penalizacion:1,cantidad:1},
+    {habitacion_id:"cocina",nombre:"Mesa",fs:4,penalizacion:0,cantidad:1},
+    {habitacion_id:"cocina",nombre:"Silla",fs:2,penalizacion:0,cantidad:2},
+    {habitacion_id:"cocina",nombre:"Vasos",fs:3,penalizacion:2,cantidad:1},
+    {habitacion_id:"cocina",nombre:"Piso",fs:5,penalizacion:0,cantidad:1},
+    {habitacion_id:"bano",nombre:"Lavamanos",fs:3,penalizacion:0,cantidad:1},
+    {habitacion_id:"bano",nombre:"Espejo",fs:2,penalizacion:1,cantidad:1},
+    {habitacion_id:"bano",nombre:"Tina",fs:5,penalizacion:0,cantidad:1},
+    {habitacion_id:"bano",nombre:"Toalla",fs:2,penalizacion:0,cantidad:1},
+    {habitacion_id:"dormitorio",nombre:"Cama",fs:5,penalizacion:0,cantidad:1},
+    {habitacion_id:"dormitorio",nombre:"Alfombra",fs:3,penalizacion:0,cantidad:1},
+    {habitacion_id:"dormitorio",nombre:"Lámpara",fs:2,penalizacion:1,cantidad:1},
+    {habitacion_id:"dormitorio",nombre:"Ropero",fs:3,penalizacion:0,cantidad:1},
+    {habitacion_id:"comedor",nombre:"Mesa",fs:4,penalizacion:0,cantidad:1},
+    {habitacion_id:"comedor",nombre:"Silla",fs:2,penalizacion:0,cantidad:2},
+    {habitacion_id:"comedor",nombre:"Vajilla",fs:4,penalizacion:2,cantidad:1},
+    {habitacion_id:"comedor",nombre:"Ventanal",fs:3,penalizacion:1,cantidad:1}],
+  Consumibles:[
+    {nombre:"Ración de comida",efecto:"evitar_x",valor:0,cantidad:3,descripcion:"Si sale X, cómela y vuelve a tirar."},
+    {nombre:"Galleta",efecto:"bonus",valor:2,cantidad:3,descripcion:"+2 a tu tirada actual."},
+    {nombre:"Hueso de goma",efecto:"relanzar",valor:0,cantidad:2,descripcion:"Vuelve a tirar el dado."},
+    {nombre:"Siesta corta",efecto:"turno_extra",valor:0,cantidad:1,descripcion:"Juegas otro turno al terminar este."}],
+  Limpieza:[
+    {nombre:"Trapito",efecto:"bonus",valor:1,usos:"",cantidad:2,descripcion:"+1 a todas tus tiradas."},
+    {nombre:"Guantes suaves",efecto:"ignorar_fragil",valor:0,usos:"",cantidad:1,descripcion:"Ignoras penalizaciones de objetos delicados."},
+    {nombre:"Plumero",efecto:"reducir_fragil",valor:1,usos:"",cantidad:1,descripcion:"Reduce en 1 la penalización de objetos delicados."},
+    {nombre:"Esponja mágica",efecto:"dado_extra",valor:4,usos:3,cantidad:1,descripcion:"Lanza 1d4 extra (3 usos)."}]
+};
+const SCHEMA = {
+  Config:["clave","valor"],
+  Habitaciones:["id","nombre","orden"],
+  Objetos:["habitacion_id","nombre","fs","penalizacion","cantidad"],
+  Consumibles:["nombre","efecto","valor","cantidad","descripcion"],
+  Limpieza:["nombre","efecto","valor","usos","cantidad","descripcion"]
+};
+const NUMERIC = new Set(["orden","fs","penalizacion","cantidad","valor","usos"]);
+const EFECTOS = {
+  Consumibles:["evitar_x","relanzar","bonus","turno_extra"],
+  Limpieza:["bonus","ignorar_fragil","reducir_fragil","dado_extra"]
+};
+const HELP = {
+  Config:"rondas = rondas antes de que lleguen los dueños · recompensas_por_habitacion = cartas que roba quien termina una habitación.",
+  Habitaciones:"id = código corto sin espacios (se usa en Objetos) · orden = posición en el tablero.",
+  Objetos:"fs = fichas de suciedad · penalizacion = cuánto resta al dado (objetos delicados; 0 = normal) · cantidad = copias (Silla 1, Silla 2…).",
+  Consumibles:"Un solo uso. Efectos: evitar_x (si sale X, vuelve a tirar) · relanzar · bonus (+valor) · turno_extra.",
+  Limpieza:"Equipo que se queda la mascota. Efectos: bonus (+valor siempre) · ignorar_fragil · reducir_fragil (−valor a la penalización) · dado_extra (dado de 'valor' caras). usos vacío = permanente."
+};
+const PETS = {
+  perro:{nombre:"Perro",e:"🐶",hab:"Lanza 1d4 extra y lo suma."},
+  gato:{nombre:"Gato",e:"🐱",hab:"Ignora penalidades de objetos delicados."},
+  conejo:{nombre:"Conejo",e:"🐰",hab:"Puede repartir su tirada entre 2 objetos."}
+};
+
+// ======================= UTILIDADES =======================
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const rnd = n => 1 + Math.floor(Math.random()*n);
+const clone = o => JSON.parse(JSON.stringify(o));
+function store(k,v){try{ if(v===undefined) return localStorage.getItem(k); localStorage.setItem(k,v);}catch(e){return null}}
+function normalize(raw){
+  const d={};
+  for(const [sh,cols] of Object.entries(SCHEMA)){
+    d[sh]=(raw[sh]||[]).map(r=>{const o={};cols.forEach(c=>{let v=r[c]??"";if(typeof v==="string")v=v.trim();
+      if(NUMERIC.has(c)&&v!==""&&!(sh==="Config"))v=Number(v);
+      if(sh==="Config"&&c==="valor"&&v!==""&&!isNaN(v))v=Number(v);o[c]=v});return o})
+      .filter(r=>cols.some(c=>r[c]!==""&&r[c]!==undefined));
+  }
+  return d;
+}
+let DATA = (()=>{try{const s=store("ml_data");if(s)return normalize(JSON.parse(s))}catch(e){}return clone(DEFAULT_DATA)})();
+let dataSource = store("ml_data") ? "Escenario guardado en el navegador" : "Escenario por defecto";
+function saveData(){store("ml_data",JSON.stringify(DATA))}
+const cfg = k => { const r=DATA.Config.find(c=>c.clave===k); return r?Number(r.valor):undefined };
+function setCfg(k,v){ let r=DATA.Config.find(c=>c.clave===k); if(!r){r={clave:k,valor:v};DATA.Config.push(r)} r.valor=v; }
+
+function show(id){document.querySelectorAll(".screen").forEach(s=>s.classList.toggle("on",s.id===id))}
+function modal(html){$("modalBody").innerHTML=html;$("modal").classList.add("on")}
+function closeModal(){$("modal").classList.remove("on")}
+
+// ======================= MENÚ =======================
+let chosen = new Set(["perro","gato","conejo"]);
+function renderMenu(){
+  $("petPick").innerHTML = Object.entries(PETS).map(([k,p])=>
+    `<div class="pet-pick ${chosen.has(k)?"sel":""}" data-k="${k}"><div class="e">${p.e}</div><b>${p.nombre}</b><div class="mute">${p.hab}</div></div>`).join("");
+  $("petPick").querySelectorAll(".pet-pick").forEach(el=>el.onclick=()=>{const k=el.dataset.k;
+    chosen.has(k)?chosen.delete(k):chosen.add(k);renderMenu()});
+  $("rondasIn").value = cfg("rondas") || 10;
+  const nObj=DATA.Objetos.reduce((a,o)=>a+(Number(o.cantidad)||1),0), nFs=DATA.Objetos.reduce((a,o)=>a+(Number(o.fs)||0)*(Number(o.cantidad)||1),0);
+  $("dataInfo").textContent = `${dataSource} · ${DATA.Habitaciones.length} habitaciones · ${nObj} objetos · ${nFs} FS en total`;
+  $("btnPlay").disabled = chosen.size===0;
+}
+$("rondasIn").onchange=()=>{setCfg("rondas",Math.max(1,Number($("rondasIn").value)||10));saveData()};
+$("btnPlay").onclick=startGame;
+$("btnEdit").onclick=()=>{edData=clone(DATA);renderEditor();show("editor")};
+$("btnLoadX").onclick=()=>$("fileX").click();
+$("btnSaveX").onclick=exportExcel;
+$("btnRules").onclick=()=>modal(`<h3>Reglas rápidas</h3>
+<p>Cooperativo. Cada ronda, cada mascota juega un turno. Si la casa queda sin fichas de suciedad (FS) antes de que lleguen los dueños, ¡ganan!</p>
+<p><b>Dado especial:</b> caras 1–5 y <b>X</b>. Con X pierdes el turno.</p>
+<p><b>Turno:</b> lanza el dado → haz clic en un objeto para gastar los puntos. Los objetos delicados restan su penalización (<span class="pen">-x</span>).</p>
+<p>🐶 +1d4 · 🐱 ignora penalidades · 🐰 reparte entre 2 objetos.</p>
+<p><b>Recompensas:</b> quien termina una habitación roba un consumible u objeto de limpieza.</p>
+<div class="row" style="justify-content:flex-end"><button class="pri" onclick="closeModal()">Entendido</button></div>`);
+$("fileX").onchange=e=>{const f=e.target.files[0];if(!f)return;importExcel(f);e.target.value=""};
+
+function importExcel(file){
+  if(typeof XLSX==="undefined"){alert("No se pudo cargar la librería de Excel (¿sin internet?).");return}
+  const fr=new FileReader();
+  fr.onload=()=>{try{
+    const wb=XLSX.read(fr.result,{type:"array"}); const raw={};
+    for(const sh of Object.keys(SCHEMA)){ if(wb.Sheets[sh]) raw[sh]=XLSX.utils.sheet_to_json(wb.Sheets[sh],{defval:""}); else raw[sh]=DATA[sh]; }
+    DATA=normalize(raw); saveData(); dataSource=`Cargado desde “${file.name}”`; renderMenu();
+    const faltan=Object.keys(SCHEMA).filter(s=>!wb.Sheets[s]);
+    modal(`<h3>Excel cargado ✅</h3><p>${esc(file.name)}</p>${faltan.length?`<p class="mute">Hojas no encontradas (se mantuvieron las actuales): ${faltan.join(", ")}</p>`:""}<div class="row" style="justify-content:flex-end"><button class="pri" onclick="closeModal()">OK</button></div>`);
+  }catch(err){alert("Error leyendo el Excel: "+err.message)}};
+  fr.readAsArrayBuffer(file);
+}
+function exportExcel(){
+  if(typeof XLSX==="undefined"){alert("No se pudo cargar la librería de Excel (¿sin internet?).");return}
+  const wb=XLSX.utils.book_new();
+  for(const [sh,cols] of Object.entries(SCHEMA)) XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(DATA[sh],{header:cols}),sh);
+  XLSX.writeFile(wb,"datos_escenario.xlsx");
+}
+
+// ======================= EDITOR =======================
+let edData=null, edTab="Habitaciones";
+function renderEditor(){
+  $("edTabs").innerHTML=Object.keys(SCHEMA).map(s=>`<button class="${s===edTab?"on":""}" data-s="${s}">${s} (${edData[s].length})</button>`).join("");
+  $("edTabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{edTab=b.dataset.s;renderEditor()});
+  const cols=SCHEMA[edTab], rows=edData[edTab];
+  const habIds=edData.Habitaciones.map(h=>h.id);
+  const cell=(c,v,i)=>{
+    if(edTab==="Objetos"&&c==="habitacion_id")
+      return `<select data-i="${i}" data-c="${c}">${[...new Set([...habIds,v])].map(h=>`<option ${h===v?"selected":""}>${esc(h)}</option>`).join("")}</select>`;
+    if(EFECTOS[edTab]&&c==="efecto")
+      return `<select data-i="${i}" data-c="${c}">${[...new Set([...EFECTOS[edTab],v])].map(h=>`<option ${h===v?"selected":""}>${esc(h)}</option>`).join("")}</select>`;
+    return `<input data-i="${i}" data-c="${c}" value="${esc(v)}" ${NUMERIC.has(c)?'type="number" style="max-width:90px"':""}>`;
+  };
+  $("edTable").innerHTML=`<table><thead><tr>${cols.map(c=>`<th>${c}</th>`).join("")}<th></th></tr></thead><tbody>
+    ${rows.map((r,i)=>`<tr>${cols.map(c=>`<td>${cell(c,r[c],i)}</td>`).join("")}<td><button data-del="${i}" title="Eliminar">🗑</button></td></tr>`).join("")}
+    </tbody></table><div class="row" style="margin-top:8px"><button id="edAdd">+ Agregar fila</button></div>`;
+  $("edTable").querySelectorAll("[data-c]").forEach(inp=>inp.onchange=()=>{
+    const c=inp.dataset.c; let v=inp.value; if(NUMERIC.has(c)&&v!=="")v=Number(v);
+    edData[edTab][inp.dataset.i][c]=v;});
+  $("edTable").querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{edData[edTab].splice(Number(b.dataset.del),1);renderEditor()});
+  $("edAdd").onclick=()=>{const r={};cols.forEach(c=>r[c]="");
+    if(edTab==="Objetos"){r.habitacion_id=habIds[0]||"";r.fs=1;r.penalizacion=0;r.cantidad=1}
+    if(edTab==="Habitaciones"){r.orden=rows.length+1}
+    if(EFECTOS[edTab]){r.efecto=EFECTOS[edTab][0];r.valor=0;r.cantidad=1}
+    rows.push(r);renderEditor()};
+  $("edHelp").textContent=HELP[edTab];
+}
+$("btnEdSave").onclick=()=>{DATA=normalize(edData);saveData();dataSource="Escenario editado (guardado en el navegador)";edData=clone(DATA);renderEditor();
+  modal(`<h3>Guardado ✅</h3><div class="row" style="justify-content:flex-end"><button class="pri" onclick="closeModal()">OK</button></div>`)};
+$("btnEdReset").onclick=()=>{if(confirm("¿Volver al escenario por defecto? Se pierden los cambios guardados.")){edData=clone(DEFAULT_DATA);renderEditor()}};
+$("btnEdBack").onclick=()=>{renderMenu();show("menu")};
+
+// ======================= JUEGO =======================
+let G=null;
+function buildDeck(){
+  const deck=[];
+  DATA.Consumibles.forEach(c=>{for(let i=0;i<(Number(c.cantidad)||1);i++)deck.push({tipo:"consumible",...c})});
+  DATA.Limpieza.forEach(c=>{for(let i=0;i<(Number(c.cantidad)||1);i++)deck.push({tipo:"limpieza",...c,usosRest:c.usos===""?null:Number(c.usos)})});
+  for(let i=deck.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[deck[i],deck[j]]=[deck[j],deck[i]]}
+  return deck;
+}
+function startGame(){
+  let uid=0;
+  const rooms=[...DATA.Habitaciones].sort((a,b)=>(a.orden||0)-(b.orden||0)).map(h=>{
+    const objs=[];
+    DATA.Objetos.filter(o=>o.habitacion_id===h.id).forEach(o=>{
+      const n=Math.max(1,Number(o.cantidad)||1);
+      for(let i=1;i<=n;i++)objs.push({uid:uid++,nombre:n>1?`${o.nombre} ${i}`:o.nombre,fsMax:Number(o.fs)||1,fs:Number(o.fs)||1,pen:Number(o.penalizacion)||0});
+    });
+    return {id:h.id,nombre:h.nombre,objs,premiada:false};
+  }).filter(r=>r.objs.length);
+  G={rooms,deck:buildDeck(),pets:[...chosen].map(k=>({k,...PETS[k],inv:[],equipo:[]})),
+     ronda:1,maxRondas:cfg("rondas")||10,turno:0,fase:"tirar",tir:null,extra:false,log:[],fin:null};
+  addLog(`🏠 Los dueños llegan en ${G.maxRondas} rondas. ¡A limpiar!`);
+  show("game"); renderGame();
+}
+const pet = () => G.pets[G.turno];
+const totalFs = () => G.rooms.reduce((a,r)=>a+r.objs.reduce((b,o)=>b+o.fs,0),0);
+const maxFs = () => G.rooms.reduce((a,r)=>a+r.objs.reduce((b,o)=>b+o.fsMax,0),0);
+function addLog(t){G.log.unshift(t)}
+function penFor(p,o){
+  if(!o.pen)return 0;
+  if(p.k==="gato"||p.equipo.some(e=>e.efecto==="ignorar_fragil"))return 0;
+  const red=p.equipo.filter(e=>e.efecto==="reducir_fragil").reduce((a,e)=>a+(Number(e.valor)||0),0);
+  return Math.max(0,o.pen-red);
+}
+const maxTargets = p => p.k==="conejo"?2:1;
+
+function tirar(){
+  const p=pet(); const cara=rnd(6);
+  const t={dados:[], bonus:0, total:0, resto:0, objetivos:[], x:false};
+  if(cara===6){t.x=true;t.dados.push({tipo:"d6",v:"X"});G.tir=t;G.fase="x";addLog(`${p.e} ${p.nombre} sacó ❌ X… se distrajo.`);animDice();return}
+  t.dados.push({tipo:"d6",v:cara});
+  if(p.k==="perro")t.dados.push({tipo:"d4",v:rnd(4)});
+  p.equipo.forEach(e=>{
+    if(e.efecto==="dado_extra"){const v=rnd(Number(e.valor)||4);t.dados.push({tipo:"ex",v,de:e.nombre});
+      if(e.usosRest!=null){e.usosRest--; if(e.usosRest<=0)addLog(`🧽 ${e.nombre} de ${p.nombre} se gastó.`)}}
+    if(e.efecto==="bonus")t.bonus+=Number(e.valor)||0;
+  });
+  p.equipo=p.equipo.filter(e=>e.usosRest==null||e.usosRest>0);
+  t.total=t.dados.reduce((a,d)=>a+d.v,0)+t.bonus; t.resto=t.total;
+  G.tir=t; G.fase="asignar";
+  addLog(`${p.e} ${p.nombre} tiró ${t.dados.map(d=>d.v).join(" + ")}${t.bonus?` + ${t.bonus} (equipo)`:""} = <b>${t.total}</b> puntos.`);
+  animDice();
+}
+function animDice(){
+  renderGame();
+  const els=document.querySelectorAll("#turnBox .die"); const finals=[...els].map(e=>e.textContent); let n=0;
+  const iv=setInterval(()=>{els.forEach((e,i)=>e.textContent=e.classList.contains("d4")?rnd(4):["1","2","3","4","5","X"][rnd(6)-1]);
+    if(++n>7){clearInterval(iv);els.forEach((e,i)=>e.textContent=finals[i])}},55);
+}
+function usarConsumible(idx){
+  const p=pet(), c=p.inv[idx];
+  if(c.efecto==="evitar_x"&&G.fase==="x"){p.inv.splice(idx,1);addLog(`🍖 ${p.nombre} usó ${c.nombre} y vuelve a tirar.`);tirar();return}
+  if(c.efecto==="relanzar"&&(G.fase==="x"||(G.fase==="asignar"&&!G.tir.objetivos.length))){p.inv.splice(idx,1);addLog(`🔁 ${p.nombre} usó ${c.nombre}.`);tirar();return}
+  if(c.efecto==="bonus"&&G.fase==="asignar"){p.inv.splice(idx,1);G.tir.bonus+=Number(c.valor)||0;G.tir.total+=Number(c.valor)||0;G.tir.resto+=Number(c.valor)||0;addLog(`🍪 ${p.nombre} usó ${c.nombre}: +${c.valor}.`);renderGame();return}
+  if(c.efecto==="turno_extra"&&!G.extra&&G.fase!=="fin"){p.inv.splice(idx,1);G.extra=true;addLog(`😴 ${p.nombre} usó ${c.nombre}: jugará otro turno.`);renderGame();return}
+}
+function puedeUsar(c){
+  if(!G||G.fin)return false;
+  if(c.efecto==="evitar_x")return G.fase==="x";
+  if(c.efecto==="relanzar")return G.fase==="x"||(G.fase==="asignar"&&!G.tir.objetivos.length);
+  if(c.efecto==="bonus")return G.fase==="asignar";
+  if(c.efecto==="turno_extra")return !G.extra;
+  return false;
+}
+function clickObj(uid){
+  if(G.fase!=="asignar"||G.tir.resto<=0)return;
+  const p=pet(); const o=G.rooms.flatMap(r=>r.objs).find(o=>o.uid===uid);
+  if(!o||o.fs<=0||G.tir.objetivos.includes(uid))return;
+  const pen=penFor(p,o);
+  const ultimo = G.tir.objetivos.length+1>=maxTargets(p);
+  if(ultimo){aplicar(o,G.tir.resto);return}
+  // conejo: elegir cuántos puntos
+  const prev=v=>Math.min(o.fs,Math.max(0,v-pen));
+  modal(`<h3>${p.e} ¿Cuántos puntos a “${esc(o.nombre)}”?</h3>
+    <p class="mute">Tienes ${G.tir.resto} puntos. Puedes guardar el resto para un segundo objeto.${pen?` Penalización: <span class="pen">-${pen}</span>`:""}</p>
+    <div class="row"><input id="ptsIn" type="range" min="1" max="${G.tir.resto}" value="${Math.min(G.tir.resto,o.fs+pen)}" style="flex:1"><b id="ptsV"></b></div>
+    <p id="ptsP"></p>
+    <div class="row" style="justify-content:flex-end"><button onclick="closeModal()">Cancelar</button><button class="pri" id="ptsOk">Limpiar</button></div>`);
+  const upd=()=>{const v=Number($("ptsIn").value);$("ptsV").textContent=v;$("ptsP").textContent=`Limpiará ${prev(v)} FS · te quedan ${G.tir.resto-v} puntos.`};
+  $("ptsIn").oninput=upd; upd();
+  $("ptsOk").onclick=()=>{closeModal();aplicar(o,Number($("ptsIn").value))};
+}
+function aplicar(o,pts){
+  const p=pet(), pen=penFor(p,o);
+  const lim=Math.min(o.fs,Math.max(0,pts-pen));
+  o.fs-=lim; G.tir.resto-=pts; G.tir.objetivos.push(o.uid);
+  addLog(`${p.e} limpió <b>${lim} FS</b> de ${esc(o.nombre)}${pen?` (penalización -${pen})`:""}${o.pen&&!pen?" (sin penalización)":""}.`);
+  G.rooms.forEach(r=>{if(!r.premiada&&r.objs.every(x=>x.fs<=0)){r.premiada=true;addLog(`✨ ¡${esc(r.nombre)} quedó limpia!`);premiar(p)}});
+  if(totalFs()===0){G.fin="win";G.fase="fin";addLog("🏆 ¡La casa está impecable! Los dueños vuelven felices.");renderGame();return}
+  if(G.tir.resto<=0||G.tir.objetivos.length>=maxTargets(p))finTurno(); else renderGame();
+}
+function premiar(p){
+  const n=cfg("recompensas_por_habitacion")??1;
+  for(let i=0;i<n;i++){
+    if(!G.deck.length){addLog("📦 Ya no quedan recompensas.");return}
+    const c=G.deck.pop();
+    if(c.tipo==="consumible")p.inv.push(c);else p.equipo.push(c);
+    addLog(`🎁 ${p.nombre} encontró: <b>${esc(c.nombre)}</b> (${c.tipo}).`);
+    G.ultimoPremio={p,c};
+  }
+}
+function finTurno(){
+  if(G.fin)return;
+  if(G.extra){G.extra=false;addLog(`${pet().e} ${pet().nombre} juega su turno extra.`)}
+  else{
+    G.turno++;
+    if(G.turno>=G.pets.length){G.turno=0;G.ronda++;
+      if(G.ronda>G.maxRondas){G.fin="lose";G.fase="fin";addLog(`🚪 ¡Llegaron los dueños! Quedaron ${totalFs()} FS sin limpiar.`);renderGame();return}
+      addLog(`— Ronda ${G.ronda} de ${G.maxRondas} —`);
+    }
+  }
+  G.fase="tirar";G.tir=null;renderGame();
+}
+
+function renderGame(){
+  const p=pet(), restantes=totalFs(), mx=maxFs();
+  $("clock").textContent=`⏰ Ronda ${Math.min(G.ronda,G.maxRondas)} / ${G.maxRondas}`;
+  $("prog").style.width=`${Math.round(100*(mx-restantes)/mx)}%`;
+  $("progTxt").textContent=`${mx-restantes}/${mx} FS`;
+  const asignando=G.fase==="asignar"&&G.tir.resto>0;
+  $("rooms").innerHTML=G.rooms.map(r=>{
+    const left=r.objs.reduce((a,o)=>a+o.fs,0), clean=left===0;
+    return `<div class="card room ${clean?"clean":""}"><h3><span>${esc(r.nombre)}</span><span class="mute">${clean?"✨ limpia":left+" FS"}</span></h3>
+    ${r.objs.map(o=>{const can=asignando&&o.fs>0&&!G.tir.objetivos.includes(o.uid);const pen=o.pen?penFor(p,o):0;
+      return `<div class="obj ${o.fs<=0?"done":""} ${can?"click":""}" data-uid="${o.uid}">
+        <span>${esc(o.nombre)}${o.pen?`<span class="pen" title="Objeto delicado">-${o.pen}${pen!==o.pen?` → -${pen}`:""}</span>`:""}</span>
+        <span class="fs">${Array.from({length:o.fsMax},(_,i)=>`<i class="tok ${i<o.fs?"":"off"}"></i>`).join("")}</span></div>`}).join("")}</div>`;
+  }).join("");
+  $("rooms").querySelectorAll(".obj.click").forEach(el=>el.onclick=()=>clickObj(Number(el.dataset.uid)));
+
+  // panel de turno
+  let h="";
+  if(G.fin==="win") h=`<h2>🏆 ¡Ganaron!</h2><p>Casa limpia en la ronda ${G.ronda} de ${G.maxRondas}.</p><div class="row"><button class="pri" onclick="startGame()">Jugar otra vez</button><button onclick="renderMenu();show('menu')">Menú</button></div>`;
+  else if(G.fin==="lose") h=`<h2>🚪 Llegaron los dueños…</h2><p>Quedaron <b>${restantes} FS</b> sin limpiar (${Math.round(100*(mx-restantes)/mx)}% limpio).</p><div class="row"><button class="pri" onclick="startGame()">Reintentar</button><button onclick="renderMenu();show('menu')">Menú</button></div>`;
+  else{
+    h=`<h3>Turno de ${p.e} ${p.nombre}${G.extra?" <span class='chip'>+ turno extra</span>":""}</h3>`;
+    if(G.tir){h+=`<div class="dice">${G.tir.dados.map(d=>`<div class="die ${d.tipo==="d4"?"d4":""} ${d.tipo==="ex"?"ex":""} ${d.v==="X"?"x":""}" title="${d.de||d.tipo}">${d.v}</div>`).join("")}</div>`}
+    if(G.fase==="tirar") h+=`<button class="pri" style="width:100%" onclick="tirar()">🎲 Lanzar dado</button>`;
+    if(G.fase==="x") h+=`<p class="pts">❌ ¡X! ${p.nombre} se distrajo y pierde el turno.</p><button class="warn" style="width:100%" onclick="finTurno()">Perder turno</button>`;
+    if(G.fase==="asignar"){
+      const n=maxTargets(p)-G.tir.objetivos.length;
+      h+=`<p class="pts">Puntos: <b>${G.tir.resto}</b>${G.tir.bonus?` <span class="mute">(incluye +${G.tir.bonus})</span>`:""}</p>
+      <p class="mute" style="text-align:center">👉 Haz clic en un objeto para limpiarlo${p.k==="conejo"?` (puedes elegir ${n} objeto${n>1?"s":""} más)`:""}.</p>
+      <button style="width:100%" onclick="finTurno()">Terminar turno${G.tir.resto?" (perder puntos)":""}</button>`;
+    }
+  }
+  $("turnBox").innerHTML=h;
+
+  $("petCards").innerHTML=G.pets.map((q,i)=>`<div class="card petcard ${i===G.turno&&!G.fin?"act":""}">
+    <div class="hd"><span class="e">${q.e}</span><div><b>${q.nombre}</b><div class="mute">${q.hab}</div></div></div>
+    <div style="margin-top:6px"><span class="mute">Equipo:</span> ${q.equipo.length?q.equipo.map(e=>`<span class="chip" title="${esc(e.descripcion)}">🧽 ${esc(e.nombre)}${e.usosRest!=null?` (${e.usosRest})`:""}</span>`).join(""):"<span class='mute'>—</span>"}</div>
+    <div><span class="mute">Mochila:</span> ${q.inv.length?q.inv.map((c,j)=>{const u=i===G.turno&&puedeUsar(c);
+      return `<span class="chip ${u?"use":""}" ${u?`onclick="usarConsumible(${j})"`:""} title="${esc(c.descripcion)}${u?" — clic para usar":""}">🍖 ${esc(c.nombre)}</span>`}).join(""):"<span class='mute'>—</span>"}</div>
+  </div>`).join("");
+  $("log").innerHTML=G.log.map(l=>`<div>${l}</div>`).join("");
+}
+$("btnMenu").onclick=()=>{if(G&&!G.fin&&!confirm("¿Salir de la partida?"))return;renderMenu();show("menu")};
+$("modal").onclick=e=>{if(e.target.id==="modal")closeModal()};
+renderMenu();
+</script>
+</body>
+</html>
